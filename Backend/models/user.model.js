@@ -13,7 +13,6 @@ const userSchema = new mongoose.Schema({
             },
             lastName:{
                   type:String,
-                 
                   minlength:[3,"Last name must be at least 3 characters long"]
             }
       },
@@ -34,19 +33,30 @@ const userSchema = new mongoose.Schema({
       
 })
 
-userSchema.methods.generateAuthToken = function(){
-      const token = jwt.sign({
-            _id: this._id,}, process.env.JWT_SECRET)
-            return token;
-}
+userSchema.methods.generateAuthToken = function () {
+      const jwtSecret = process.env.JWT_SECRET;
+      if (!jwtSecret) {
+          throw new Error('JWT secret key is missing. Please check your environment configuration.');
+      }
+  
+      const token = jwt.sign(
+          { _id: this._id }, // Payload
+          jwtSecret, // Secret key
+          { expiresIn: '1h' } // Options
+      );
+      return token;
+  };
+
+  
 
 userSchema.methods.comparePassword = async function (password){
       return await bcrypt.compare(password, this.password);
 }
 
-userSchema.method.hashPassword = async function(password){
-      this.password = await bcrypt.hash(password, 10);
-}
+userSchema.statics.hashPassword = async function(password) {
+      const salt = await bcrypt.genSalt(10);
+      return await bcrypt.hash(password, salt);
+  };
 
-const User = mongoose.model("user", userSchema);
-module.exports = User
+const userModel = mongoose.model("User", userSchema);
+module.exports = userModel;
